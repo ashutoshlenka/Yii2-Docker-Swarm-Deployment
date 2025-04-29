@@ -1,20 +1,79 @@
-- name: Install Docker
+---
+- name: Remove old Docker versions if any
   apt:
-    name: docker.io
+    name:
+      - docker
+      - docker-engine
+      - docker.io
+      - containerd
+      - containerd.io
+    state: absent
+  ignore_errors: yes
+
+
+- name: Install Docker dependencies
+  apt:
+    name:
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - software-properties-common
     state: present
     update_cache: yes
 
-- name: Enable and start Docker
-  systemd:
+
+- name: Download Docker GPG key
+  ansible.builtin.get_url:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    dest: /usr/share/keyrings/docker-archive-keyring.gpg
+    mode: '0644'
+
+
+- name: Add Docker APT repository
+  ansible.builtin.apt_repository:
+    repo: "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+    state: present
+    filename: docker
+    update_cache: yes
+
+
+- name: Update apt cache
+  apt:
+    update_cache: yes
+
+
+- name: Verify Docker repository is used
+  shell: apt-cache policy docker-ce
+  register: docker_repo_check
+  changed_when: false
+
+- name: Output Docker repository info
+  debug:
+    var: docker_repo_check.stdout
+
+
+- name: Install Docker Engine
+  apt:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+    state: latest
+
+
+- name: Ensure Docker is running
+  service:
     name: docker
-    enabled: yes
     state: started
+    enabled: true
+
 
 - name: Install Docker Compose
   get_url:
     url: https://github.com/docker/compose/releases/download/v2.24.6/docker-compose-linux-x86_64
     dest: /usr/local/bin/docker-compose
     mode: '0755'
+
 
 - name: Init Docker Swarm
   shell: docker swarm init
