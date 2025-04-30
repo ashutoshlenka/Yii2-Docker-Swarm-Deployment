@@ -16,6 +16,16 @@ jobs:
           docker build -t ashutosh1999/yii2-app:latest .
           docker push ashutosh1999/yii2-app:latest
 
+          
+      - name: Debug - Test Raw SSH Connection
+        run: |
+          echo "${{ secrets.EC2_SSH_KEY }}" > key.pem
+          chmod 400 key.pem
+          ssh -vvv -o StrictHostKeyChecking=no \
+              -i key.pem \
+              ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} \
+              "echo 'SSH Success! Host: $(hostname)'"
+
       - name: Deploy to EC2
         uses: appleboy/ssh-action@master
         with:
@@ -24,20 +34,11 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             sudo docker pull ashutosh1999/yii2-app:latest
-
             if ! sudo docker service inspect yii2_app >/dev/null 2>&1; then
-              echo "Service not found, creating new service..."
               sudo docker service create \
                 --name yii2_app \
                 --publish 80:80 \
-                --replicas 1 \
                 ashutosh1999/yii2-app:latest
             else
-              echo "Service exists, updating..."
-              sudo docker service update \
-                --image ashutosh1999/yii2-app:latest \
-                yii2_app
+              sudo docker service update --image ashutosh1999/yii2-app:latest yii2_app
             fi
-            
-            echo "Current service status:"
-            sudo docker service ps yii2_app
