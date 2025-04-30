@@ -24,5 +24,20 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             sudo docker pull ashutosh1999/yii2-app:latest
-            sudo docker service update --image ashutosh1999/yii2-app:latest yii2_app
 
+            if ! sudo docker service inspect yii2_app >/dev/null 2>&1; then
+              echo "Service not found, creating new service..."
+              sudo docker service create \
+                --name yii2_app \
+                --publish 80:80 \
+                --replicas 1 \
+                ashutosh1999/yii2-app:latest
+            else
+              echo "Service exists, updating..."
+              sudo docker service update \
+                --image ashutosh1999/yii2-app:latest \
+                yii2_app
+            fi
+            
+            echo "Current service status:"
+            sudo docker service ps yii2_app
