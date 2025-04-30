@@ -15,7 +15,6 @@ jobs:
         run: |
           docker build -t ashutosh1999/yii2-app:latest .
           docker push ashutosh1999/yii2-app:latest
-
           
       - name: Debug - Test Raw SSH Connection
         run: |
